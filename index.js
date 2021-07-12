@@ -20,7 +20,7 @@ app.use(fileUpload())
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.a3ov0.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 client.connect(err => {
-  const productCollection = client.db("pickbazar").collection("devices");
+  const productCollection = client.db("pickbazar").collection("products");
   // perform actions on the collection object
 
   app.get("/products", (req, res) =>{
@@ -38,12 +38,16 @@ client.connect(err => {
   app.post('/addproduct', (req,res) => {
     const filePath = `${(__dirname)}/products/`
     const files = req.files
-    const productInfo = req.body.data
+    let {name,desc,unit,price,sale,discount,quantity, category,tags} = JSON.parse(req.body.data)
+    price = Number(price)
+    sale = Number(sale)
+    discount = Number(discount)
+    quantity = Number(quantity)
     const values = Object.values(Object.values(files))
     
     let source = ""
-    let images = []
-    let obj = {}
+    let img = []
+
     values.map((file,index) => {
       source = (filePath+file.name).toString()
       file.mv(source, err => {
@@ -59,17 +63,22 @@ client.connect(err => {
           size: file.size,
           img: Buffer(encImg, 'base64')
         }
-        images.push(image)
-        if(values.length === index+1){
-          productCollection.insertOne({productInfo, images})
+        img.push(image)
+        if(values.length === (index+1)){
+          productCollection.insertOne({name,desc,unit,price,sale,discount,quantity, category,tags,img})
           .then(result => {
-
+            values.map(item => {
+              fs.remove(filePath+item.name, error => {
+                if(error){
+                  res.send(error.message)
+                }
+              })
+            })
+            res.send(result.insertedCount > 0)
           })
         }
       })
     })
-    
-    res.send({msg:"uploaded"})
   })
   
 });
