@@ -375,9 +375,13 @@ client.connect(err => {
 
 
   app.post('/addCoupon', (req,res) => {
-    let {name,discount,code,totalCoupons,couponCategory,remainingCoupons,minimumAmount,creation,status} = req.body
+    let {name,discount,code,totalCoupons,remainingCoupons,minimumAmount,creation,status} = req.body
+    discount = Number(discount)
+    totalCoupons = Number(totalCoupons)
+    remainingCoupons = Number(remainingCoupons)
+    minimumAmount = Number(minimumAmount)
     try{
-      couponCollection.insertOne({name,discount,code,totalCoupons,remainingCoupons,creation,couponCategory,minimumAmount,status})
+      couponCollection.insertOne({name,discount,code,totalCoupons,remainingCoupons,creation,minimumAmount,status})
       .then(result => {
         res.send(result.insertedCount > 0)
       })
@@ -406,7 +410,11 @@ client.connect(err => {
   })
 
   app.put('/updateCoupon/:id', (req,res) => {
-    let {name,discount,code,totalCoupons,couponCategory,remainingCoupons,minimumAmount,status} = req.body
+    let {name,discount,code,totalCoupons,remainingCoupons,minimumAmount,creation,status} = req.body
+    discount = Number(discount)
+    totalCoupons = Number(totalCoupons)
+    remainingCoupons = Number(remainingCoupons)
+    minimumAmount = Number(minimumAmount)
     try{
       couponCollection.updateOne(
         {_id: ObjectId(req.params.id)},
@@ -416,9 +424,69 @@ client.connect(err => {
             code:code,
             totalCoupons:totalCoupons,
             remainingCoupons:remainingCoupons,
-            couponCategory:couponCategory,
             minimumAmount:minimumAmount,
+            creation:creation,
             status:status
+          }
+      })
+      .then(result => {
+        res.send(result.modifiedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+
+
+  /********************* orders **********************/
+
+  app.get('/orders/:id', (req,res) => {
+    orderCollection.find({customerId: req.params.id})
+    .toArray((err, documents) =>{
+        if(err){
+            res.send(err.message)
+        }
+        else{
+            res.send(documents);
+        }
+    })
+  })
+
+  app.get('/orders/', (req,res) => {
+    orderCollection.find({})
+    .toArray((err, documents) =>{
+        if(err){
+            res.send(err.message)
+        }
+        else{
+            res.send(documents);
+        }
+    })
+  })
+
+  app.post('/addOrder', (req,res) => {
+    let {customerId,orderDate,deliveryAddress,amount,paymentMethod,deliverySchedule,contactNumber,status,products} = req.body
+    try{
+      orderCollection.insertOne({customerId,orderDate,deliveryAddress,amount,paymentMethod,deliverySchedule,contactNumber,status,products})
+      .then(result => {
+        res.send(result.insertedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+  app.put('/updateOrderStatus/:id', (req,res) => {
+    let order = req.body
+    console.log(order)
+    try{
+      orderCollection.updateOne(
+        {_id: ObjectId(req.params.id)},
+        { $set: {
+            status:order.status
           }
       })
       .then(result => {
