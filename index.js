@@ -24,6 +24,7 @@ client.connect(err => {
   const categoryCollection = client.db("pickbazar").collection("categories");
   const couponCollection = client.db("pickbazar").collection("coupons");
   const orderCollection = client.db("pickbazar").collection("orders");
+  const customerCollection = client.db("pickbazar").collection("customers");
   
 /********************* products **********************/
 
@@ -467,9 +468,12 @@ client.connect(err => {
   })
 
   app.post('/addOrder', (req,res) => {
-    let {customerId,orderDate,deliveryAddress,amount,paymentMethod,deliverySchedule,contactNumber,status,products} = req.body
+    let {customerId,orderDate,deliveryAddress,discount,amount,paymentMethod,deliverySchedule,contactNumber,status,products} = req.body
+
+    discount = Number(discount)
+    amount = Number(amount)
     try{
-      orderCollection.insertOne({customerId,orderDate,deliveryAddress,amount,paymentMethod,deliverySchedule,contactNumber,status,products})
+      orderCollection.insertOne({customerId,orderDate,deliveryAddress,discount,amount,paymentMethod,deliverySchedule,contactNumber,status,products})
       .then(result => {
         res.send(result.insertedCount > 0)
       })
@@ -481,7 +485,6 @@ client.connect(err => {
 
   app.put('/updateOrderStatus/:id', (req,res) => {
     let order = req.body
-    console.log(order)
     try{
       orderCollection.updateOne(
         {_id: ObjectId(req.params.id)},
@@ -498,6 +501,83 @@ client.connect(err => {
     }
   })
 
+
+
+  /********************* Customers **********************/
+
+
+  app.post('/addCustomer', (req,res) => {
+    let {uid, name, email, photo} = req.body
+    try{
+      customerCollection.insertOne({uid, name, email, photo})
+      .then(result => {
+        res.send(result.insertedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+  app.put('/updateCustomerAddress/:id', (req,res) => {
+    let addresses = req.body
+    try{
+      customerCollection.updateOne(
+        {uid: req.params.id},
+        { $set: {
+          deliveryAddress:addresses
+        }
+      })
+      .then(result => {
+        res.send(result.modifiedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+  app.put('/updateCustomerContact/:id', (req,res) => {
+    let contact = req.body
+    try{
+      customerCollection.updateOne(
+        {uid: req.params.id},
+        { $set: {
+            contactNumber:contact
+          }
+      })
+      .then(result => {
+        res.send(result.modifiedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+  app.get('/customer/:id', (req,res) => {
+    customerCollection.find({uid: req.params.id})
+    .toArray((err, documents) =>{
+        if(err){
+            res.send(err.message)
+        }
+        else{
+            res.send(documents);
+        }
+    })
+  })
+
+  app.get('/customers', (req,res) => {
+    customerCollection.find()
+    .toArray((err, documents) =>{
+        if(err){
+            res.send(err.message)
+        }
+        else{
+            res.send(documents);
+        }
+    })
+  })
 
   /********************* end **********************/
 
