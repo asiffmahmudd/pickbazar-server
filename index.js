@@ -53,6 +53,24 @@ client.connect(err => {
     })
   })
 
+  app.put('/updateProductQuantity', (req,res) => {
+    let item = req.body
+    try{
+      productCollection.updateOne(
+        {_id: ObjectId(item.id)},
+        { $set: {
+            quantity:Number(item.quantity)
+          }
+      })
+      .then(result => {
+        res.send(result.modifiedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
   app.delete('/deleteBulkProduct/', (req,res) => {
     const objects = req.body.map(item => {
       return ObjectId(item)
@@ -455,7 +473,7 @@ client.connect(err => {
     })
   })
 
-  app.get('/orders/', (req,res) => {
+  app.get('/orders', (req,res) => {
     orderCollection.find({})
     .toArray((err, documents) =>{
         if(err){
@@ -507,9 +525,9 @@ client.connect(err => {
 
 
   app.post('/addCustomer', (req,res) => {
-    let {uid, name, email, photo} = req.body
+    let {uid, name, email, photo, joiningDate, orders, totalAmount} = req.body
     try{
-      customerCollection.insertOne({uid, name, email, photo})
+      customerCollection.insertOne({uid, name, email, photo, joiningDate, orders, totalAmount})
       .then(result => {
         res.send(result.insertedCount > 0)
       })
@@ -526,6 +544,26 @@ client.connect(err => {
         {uid: req.params.id},
         { $set: {
           deliveryAddress:addresses
+        }
+      })
+      .then(result => {
+        res.send(result.modifiedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+  app.put('/updateCustomerOrder/:id', (req,res) => {
+    let orders = req.body.orders
+    let totalAmount = req.body.totalAmount
+    try{
+      customerCollection.updateOne(
+        {uid: req.params.id},
+        { $set: {
+          orders: orders,
+          totalAmount: totalAmount
         }
       })
       .then(result => {
