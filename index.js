@@ -28,7 +28,6 @@ client.connect(err => {
   
 /********************* products **********************/
 
-
   app.get("/products", (req, res) =>{
     productCollection.find({})
     .toArray((err, documents) =>{
