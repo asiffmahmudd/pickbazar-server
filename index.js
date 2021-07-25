@@ -96,7 +96,7 @@ client.connect(err => {
     sale = Number(sale)
     discount = Number(discount)
     quantity = Number(quantity)
-
+ 
     const files = req.files
     if(files){
       const filePath = `${(__dirname)}/products/`
