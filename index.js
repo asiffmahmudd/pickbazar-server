@@ -91,68 +91,36 @@ client.connect(err => {
 
   app.put('/updateProduct/:id', (req,res) => {
     let productId = req.params.id
-    let {name,desc,unit,price,sale,discount,quantity, category,tags} = JSON.parse(req.body.data)
+    let {name,desc,unit,price,sale,discount,quantity, category,tags,img} = req.body
     price = Number(price)
     sale = Number(sale)
     discount = Number(discount)
     quantity = Number(quantity)
-
-    const files = req.files
-    if(files){
-      const filePath = `${(__dirname)}/products/`
-      let values = Object.values(files)
-      let img = []
-      let encImg, newImg
-
-      values.map((file,index) => {
-        file.mv(filePath+file.name, async err => {
-          if(err){
-            return res.status(500).send({msg:"Failed to upload image"})
-          }
-  
-          newImg = await fs.readFileSync(filePath+file.name)
-          encImg = newImg.toString('base64')
-          let image = {
-            contentType: file.mimetype,
-            size: file.size,
-            img: Buffer(encImg, 'base64')
-          }
-          img.push(image)
-          if(values.length === (index+1)){
-            try{
-              productCollection.updateOne(
-                {_id: ObjectId(productId)},
-                { $set: {
-                    name:name,
-                    desc:desc,
-                    unit:unit,
-                    price:price,
-                    sale:sale,
-                    discount:discount,
-                    quantity:quantity, 
-                    category:category,
-                    tags:tags, 
-                    img:img
-                  }
-                }
-              )
-              .then(result => {
-                values.map(item => {
-                  fs.remove(filePath+item.name, error => {
-                    if(error){
-                      res.send(error.message)
-                    }
-                  })
-                })
-                res.send(result.modifiedCount > 0)
-              })
-            }
-            catch(e){
-              res.send(e.message)
+    if(img?.length > 0){
+      try{
+        productCollection.updateOne(
+          {_id: ObjectId(productId)},
+          { $set: {
+              name:name,
+              desc:desc,
+              unit:unit,
+              price:price,
+              sale:sale,
+              discount:discount,
+              quantity:quantity, 
+              category:category,
+              tags:tags, 
+              img:img
             }
           }
+        )
+        .then(result => {
+          res.send(result.modifiedCount > 0)
         })
-      })
+      }
+      catch(e){
+        res.send(e.message)
+      }
     }
     else{
       productCollection.updateOne(
@@ -177,51 +145,21 @@ client.connect(err => {
   })
 
   app.post('/addproduct', (req,res) => {
-    const filePath = `${(__dirname)}/products/`
-    const files = req.files
-    let {name,desc,unit,price,sale,discount,quantity, category,tags} = JSON.parse(req.body.data)
+    let {name,desc,unit,price,sale,discount,quantity, category,tags, img} = req.body
     price = Number(price)
     sale = Number(sale)
     discount = Number(discount)
     quantity = Number(quantity)
-    let values = Object.values(Object.values(files))
-    let img = []
-    let encImg, newImg
 
-    values.map((file,index) => {
-      file.mv(filePath+file.name, async err => {
-        if(err){
-          return res.status(500).send({msg:"Failed to upload image"})
-        }
-
-        newImg = await fs.readFileSync(filePath+file.name)
-        encImg = newImg.toString('base64')
-        let image = {
-          contentType: file.mimetype,
-          size: file.size,
-          img: Buffer(encImg, 'base64')
-        }
-        img.push(image)
-        if(values.length === (index+1)){
-          try{
-            productCollection.insertOne({name,desc,unit,price,sale,discount,quantity, category,tags,img})
-            .then(result => {
-              values.map(item => {
-                fs.remove(filePath+item.name, error => {
-                  if(error){
-                    res.send(error.message)
-                  }
-                })
-              })
-              res.send(result.insertedCount > 0)
-            })
-          }
-          catch(e){
-            res.send(e.message)
-          }
-        }
+    try{
+      productCollection.insertOne({name,desc,unit,price,sale,discount,quantity, category,tags,img})
+      .then(result => {
+        res.send(result.insertedCount > 0)
       })
-    })
+    }
+    catch(e){
+      res.send(e.message)
+    }
   })
 
 
@@ -260,81 +198,37 @@ client.connect(err => {
   })
 
   app.post('/addCategory', (req,res) => {
-    const filePath = `${(__dirname)}/categories/`
-    let file = req.files.file
-    let {name,type} = JSON.parse(req.body.data)
-    let encImg, newImg
+    let {name,type,img} = req.body
+    try{
+      categoryCollection.insertOne({name,type,img})
+      .then(result => {
+        res.send(result.insertedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
 
-    file.mv(filePath+file.name, async err => {
-      if(err){
-        return res.status(500).send({msg:"Failed to upload image"})
-      }
-
-      newImg = await fs.readFileSync(filePath+file.name)
-      encImg = newImg.toString('base64')
-      let img = {
-        contentType: file.mimetype,
-        size: file.size,
-        img: Buffer(encImg, 'base64')
-      }
+  app.put('/updateCategory/:id', (req,res) => {
+    let {name,type,img} = req.body
+    if(img){
       try{
-        categoryCollection.insertOne({name,type,img})
+        categoryCollection.updateOne(
+        {_id: ObjectId(req.params.id)},
+        { $set: {
+            name:name,
+            type:type, 
+            img:img
+          }
+        })
         .then(result => {
-          fs.remove(filePath+file.name, error => {
-            if(error){
-              res.send(error.message)
-            }
-          })
-          res.send(result.insertedCount > 0)
+          res.send(result.modifiedCount > 0)
         })
       }
       catch(e){
         res.send(e.message)
       }
-    })
-  })
-
-  app.put('/updateCategory/:id', (req,res) => {
-    const filePath = `${(__dirname)}/categories/`
-    let file = req.files?.file
-    let {name,type} = JSON.parse(req.body.data)
-
-    if(file){
-      let encImg, newImg;
-      file.mv(filePath+file.name, async err => {
-        if(err){
-          return res.status(500).send({msg:"Failed to upload image"})
-        }
-  
-        newImg = await fs.readFileSync(filePath+file.name)
-        encImg = newImg.toString('base64')
-        let img = {
-          contentType: file.mimetype,
-          size: file.size,
-          img: Buffer(encImg, 'base64')
-        }
-        try{
-          categoryCollection.updateOne(
-          {_id: ObjectId(req.params.id)},
-          { $set: {
-              name:name,
-              type:type, 
-              img:img
-            }
-          })
-          .then(result => {
-            fs.remove(filePath+file.name, error => {
-              if(error){
-                res.send(error.message)
-              }
-            })
-            res.send(result.modifiedCount > 0)
-          })
-        }
-        catch(e){
-          res.send(e.message)
-        }
-      })
     }
     else{
       try{
