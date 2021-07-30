@@ -17,6 +17,7 @@
     "express-fileupload": "^1.2.1",
     "firebase-admin": "^9.11.0",
     "fs-extra": "^10.0.0",
+    "heroku": "^7.56.1",
     "mongodb": "^3.6.10",
     "nodemon": "^2.0.12"
   }
