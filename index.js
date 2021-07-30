@@ -434,7 +434,6 @@ client.connect(err => {
 
   app.get('/orders', (req,res) => {
     orderCollection.find({})
-    .sort({'_id':-1})
     .toArray((err, documents) =>{
         if(err){
             res.send(err.message)
