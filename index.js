@@ -6,9 +6,25 @@ const MongoClient = require('mongodb').MongoClient;
 const ObjectId = require('mongodb').ObjectId;
 const fs = require('fs-extra')
 const fileUpload = require('express-fileupload')
-
 const app = express();
 const port = 4000;
+const admin = require('firebase-admin');
+
+admin.initializeApp({
+  credential: admin.credential.cert({
+      "type": process.env.JWT_TYPE,
+      "project_id": process.env.PROJECT_ID,
+      "private_key_id": process.env.PRIVATE_KEY_ID,
+      "private_key": process.env.PRIVATE_KEY,
+      "client_email": process.env.CLIENT_EMAIL,
+      "client_id": process.env.CLIENT_ID,
+      "auth_uri": process.env.AUTH_URI,
+      "token_uri": process.env.TOKEN_URI,
+      "auth_provider_x509_cert_url": process.env.AUTH_PROVIDER_X509_CERT_URL,
+      "client_x509_cert_url": process.env.CLIENT_X509_CERT_URL
+  }),
+  databaseURL: process.env.DB_URL
+});
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -379,15 +395,41 @@ client.connect(err => {
   /********************* orders **********************/
 
   app.get('/orders/:id', (req,res) => {
-    orderCollection.find({customerId: req.params.id})
-    .toArray((err, documents) =>{
-        if(err){
-            res.send(err.message)
-        }
-        else{
-            res.send(documents);
-        }
-    })
+    const bearer = req.headers.authorization;
+    if(bearer && bearer.startsWith('Bearer ')){
+      const idToken = bearer.split(' ')[1];
+      admin.auth().verifyIdToken(idToken)
+      .then((decodedToken) => {
+          const decodeId = decodedToken.user_id;
+          const reqId = req.params.id;
+          if(decodeId === reqId){
+            try{
+              orderCollection.find({customerId: req.params.id})
+              .sort({'_id':-1})
+              .toArray((err, documents) =>{
+                  if(err){
+                      res.send(err.message)
+                  }
+                  else{
+                      res.send(documents);
+                  }
+              })
+            }
+            catch(e){
+              res.send(e.message)
+            }
+          }
+          else{
+              res.status(401).send("Unauthorized access")
+          }
+      })
+      .catch((error) => {
+          res.status(401).send("Unauthorized access")
+      });
+    }
+    else{
+        res.status(401).send("Unauthorized access")
+    }
   })
 
   app.get('/orders', (req,res) => {
@@ -403,12 +445,11 @@ client.connect(err => {
   })
 
   app.post('/addOrder', (req,res) => {
-    let {customerId,orderDate,deliveryAddress,discount,amount,paymentMethod,deliverySchedule,contactNumber,status,products} = req.body
-
+    let {customerId,customerEmail,orderDate,orderId,deliveryAddress,discount,amount,paymentMethod,deliverySchedule,contactNumber,status,products} = req.body
     discount = Number(discount)
     amount = Number(amount)
     try{
-      orderCollection.insertOne({customerId,orderDate,deliveryAddress,discount,amount,paymentMethod,deliverySchedule,contactNumber,status,products})
+      orderCollection.insertOne({customerId,customerEmail,orderDate,orderId,deliveryAddress,discount,amount,paymentMethod,deliverySchedule,contactNumber,status,products})
       .then(result => {
         res.send(result.insertedCount > 0)
       })
@@ -456,70 +497,156 @@ client.connect(err => {
 
   app.put('/updateCustomerAddress/:id', (req,res) => {
     let addresses = req.body
-    try{
-      customerCollection.updateOne(
-        {uid: req.params.id},
-        { $set: {
-          deliveryAddress:addresses
-        }
+    const bearer = req.headers.authorization;
+    if(bearer && bearer.startsWith('Bearer ')){
+      const idToken = bearer.split(' ')[1];
+      admin.auth().verifyIdToken(idToken)
+      .then((decodedToken) => {
+          const decodeId = decodedToken.user_id;
+          const reqId = req.params.id;
+          if(decodeId === reqId){
+            try{
+              customerCollection.updateOne(
+                {uid: req.params.id},
+                { $set: {
+                  deliveryAddress:addresses
+                }
+              })
+              .then(result => {
+                res.send(result.modifiedCount > 0)
+              })
+            }
+            catch(e){
+              res.send(e.message)
+            }
+          }
+          else{
+              res.status(401).send("Unauthorized access")
+          }
       })
-      .then(result => {
-        res.send(result.modifiedCount > 0)
-      })
+      .catch((error) => {
+          res.status(401).send("Unauthorized access")
+      });
     }
-    catch(e){
-      res.send(e.message)
+    else{
+        res.status(401).send("Unauthorized access")
     }
   })
 
   app.put('/updateCustomerOrder/:id', (req,res) => {
     let orders = req.body.orders
     let totalAmount = req.body.totalAmount
-    try{
-      customerCollection.updateOne(
-        {uid: req.params.id},
-        { $set: {
-          orders: orders,
-          totalAmount: totalAmount
-        }
+    const bearer = req.headers.authorization;
+    if(bearer && bearer.startsWith('Bearer ')){
+      const idToken = bearer.split(' ')[1];
+      admin.auth().verifyIdToken(idToken)
+      .then((decodedToken) => {
+          const decodeId = decodedToken.user_id;
+          const reqId = req.params.id;
+          if(decodeId === reqId){
+            try{
+              customerCollection.updateOne(
+                {uid: req.params.id},
+                { 
+                  $set: {
+                  orders: orders,
+                  totalAmount: totalAmount
+                }
+              })
+              .then(result => {
+                res.send(result.modifiedCount > 0)
+              })
+            }
+            catch(e){
+              res.send(e.message)
+            }
+          }
+          else{
+              res.status(401).send("Unauthorized access")
+          }
       })
-      .then(result => {
-        res.send(result.modifiedCount > 0)
-      })
+      .catch((error) => {
+          res.status(401).send("Unauthorized access")
+      });
     }
-    catch(e){
-      res.send(e.message)
+    else{
+        res.status(401).send("Unauthorized access")
     }
   })
 
   app.put('/updateCustomerContact/:id', (req,res) => {
     let contact = req.body
-    try{
-      customerCollection.updateOne(
-        {uid: req.params.id},
-        { $set: {
-            contactNumber:contact
+    const bearer = req.headers.authorization;
+    if(bearer && bearer.startsWith('Bearer ')){
+      const idToken = bearer.split(' ')[1];
+      admin.auth().verifyIdToken(idToken)
+      .then((decodedToken) => {
+          const decodeId = decodedToken.user_id;
+          const reqId = req.params.id;
+          if(decodeId === reqId){
+            try{
+              customerCollection.updateOne(
+                {uid: req.params.id},
+                { $set: {
+                    contactNumber:contact
+                  }
+              })
+              .then(result => {
+                res.send(result.modifiedCount > 0)
+              })
+            }
+            catch(e){
+              res.send(e.message)
+            }
+          }
+          else{
+              res.status(401).send("Unauthorized access")
           }
       })
-      .then(result => {
-        res.send(result.modifiedCount > 0)
-      })
+      .catch((error) => {
+          res.status(401).send("Unauthorized access")
+      });
     }
-    catch(e){
-      res.send(e.message)
+    else{
+        res.status(401).send("Unauthorized access")
     }
   })
 
   app.get('/customer/:id', (req,res) => {
-    customerCollection.find({uid: req.params.id})
-    .toArray((err, documents) =>{
-        if(err){
-            res.send(err.message)
-        }
-        else{
-            res.send(documents);
-        }
-    })
+    const bearer = req.headers.authorization;
+    if(bearer && bearer.startsWith('Bearer ')){
+      const idToken = bearer.split(' ')[1];
+      admin.auth().verifyIdToken(idToken)
+      .then((decodedToken) => {
+          const decodeId = decodedToken.user_id;
+          const reqId = req.params.id;
+          if(decodeId === reqId){
+            try{
+              customerCollection.find({uid: reqId})
+              .toArray((err, documents) =>{
+                  if(err){
+                    res.send(err.message)
+                  }
+                  else{
+                    res.send(documents);
+                  }
+              })
+            }
+            catch(e){
+              res.send(e.message)
+            }
+          }
+          else{
+              res.status(401).send("Unauthorized access")
+          }
+      })
+      .catch((error) => {
+          res.status(401).send("Unauthorized access")
+      });
+    }
+    else{
+        res.status(401).send("Unauthorized access")
+    }
   })
 
   app.get('/customers', (req,res) => {
