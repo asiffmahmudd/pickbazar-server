@@ -41,6 +41,7 @@ client.connect(err => {
   const couponCollection = client.db("pickbazar").collection("coupons");
   const orderCollection = client.db("pickbazar").collection("orders");
   const customerCollection = client.db("pickbazar").collection("customers");
+  const notificationCollection = client.db("pickbazar").collection("notifications");
   
 /********************* products **********************/
 
@@ -97,10 +98,12 @@ client.connect(err => {
     try{
       productCollection.updateOne(
         {_id: ObjectId(item.id)},
-        { $set: {
+        { 
+          $set: {
             quantity:Number(item.quantity)
           }
-      })
+        }
+      )
       .then(result => {
         res.send(result.modifiedCount > 0)
       })
@@ -660,6 +663,72 @@ client.connect(err => {
         }
     })
   })
+
+
+
+  /********************* Notification **********************/
+
+
+
+  app.get("/notifications", (req, res) =>{
+    notificationCollection.find({})
+    .sort({'_id':-1})
+    .toArray((err, documents) =>{
+        if(err){
+            res.send(err.message)
+        }
+        else{
+            res.send(documents);
+        }
+    })
+  })
+
+  app.post('/addNotification', (req,res) => {
+    let {desc, unread, date} = req.body
+    try{
+      notificationCollection.insertOne({desc, unread, date})
+      .then(result => {
+        res.send(result.insertedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+  app.delete('/deleteNotifications', (req,res) => {
+    try{
+      notificationCollection.deleteMany({})
+      .then(result => {
+        res.send(result.deletedCount > 0);
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+  app.put('/updateNotification/:id', (req,res) => {
+    const id = req.params.id
+    try{
+      notificationCollection.updateOne(
+        {_id: ObjectId(id)},
+        { 
+          $set: {
+            unread:false
+          }
+        }
+      )
+      .then(result => {
+        res.send(result.modifiedCount > 0)
+      })
+    }
+    catch(e){
+      res.send(e.message)
+    }
+  })
+
+
 
   /********************* end **********************/
 
