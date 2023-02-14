@@ -230,7 +230,7 @@ client.connect(err => {
     })
   })
 
-  app.delete('/deleteBulkCategory/', (req,res) => {
+  app.delete('/deleteBulkCategory', (req,res) => {
     const objects = req.body.map(item => {
       return ObjectId(item)
     })
@@ -318,7 +318,7 @@ client.connect(err => {
     })
   })
 
-  app.delete('/deleteBulkCoupon/', (req,res) => {
+  app.delete('/deleteBulkCoupon', (req,res) => {
     const objects = req.body.map(item => {
       return ObjectId(item)
     })
