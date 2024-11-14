@@ -9,7 +9,7 @@ const fileUpload = require('express-fileupload')
 const app = express();
 const port = 4000;
 const admin = require('firebase-admin');
-const {privateKey} = JSON.parse(process.env.PRIVATE_KEY)
+const { privateKey } = JSON.parse(process.env.PRIVATE_KEY.replace(/\\n/g, '\n'));
 
 admin.initializeApp({
   credential: admin.credential.cert({
